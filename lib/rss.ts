@@ -8,6 +8,8 @@ export interface FeedConfig {
   type?: 'xml' | 'rss2json';
 }
 
+const FETCH_TIMEOUT_MS = 8_000;
+
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '_attr_',
@@ -53,26 +55,33 @@ function resolveLink(item: Record<string, unknown>): string {
   return '';
 }
 
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 export async function fetchFeed(config: FeedConfig): Promise<NewsItem[]> {
   if (config.type === 'rss2json') return fetchRss2Json(config);
   return fetchXmlFeed(config);
 }
 
 async function fetchXmlFeed(config: FeedConfig): Promise<NewsItem[]> {
-  const res = await fetch(config.url, {
+  const res = await fetchWithTimeout(config.url, {
     next: { revalidate: 900 },
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; FinNewsAggregator/1.0; +https://github.com)',
+      'User-Agent': 'Mozilla/5.0 (compatible; FinNewsAggregator/1.0)',
       Accept: 'application/rss+xml, application/xml, text/xml, */*',
     },
-  });
+  } as RequestInit);
 
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${config.source}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} from ${config.source}`);
 
   const xml = await res.text();
   const parsed = xmlParser.parse(xml);
 
-  // Support RSS 2.0 (rss.channel.item) and Atom (feed.entry)
   const channel = parsed?.rss?.channel ?? parsed?.feed ?? {};
   const rawItems: unknown[] = Array.isArray(channel.item)
     ? channel.item
@@ -98,10 +107,9 @@ async function fetchXmlFeed(config: FeedConfig): Promise<NewsItem[]> {
 }
 
 async function fetchRss2Json(config: FeedConfig): Promise<NewsItem[]> {
-  const res = await fetch(config.url, {
+  const res = await fetchWithTimeout(config.url, {
     next: { revalidate: 900 },
-    headers: { 'User-Agent': 'Mozilla/5.0' },
-  });
+  } as RequestInit);
   if (!res.ok) throw new Error(`rss2json HTTP ${res.status}`);
 
   const data = await res.json();

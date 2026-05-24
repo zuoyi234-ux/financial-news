@@ -1,12 +1,12 @@
 import type { SourceKey } from '@/lib/types';
 
 const TABS: { key: SourceKey; label: string }[] = [
-  { key: 'all',       label: 'All Sources' },
-  { key: 'wsj',       label: 'WSJ'         },
-  { key: 'ft',        label: 'FT'          },
-  { key: 'reuters',   label: 'Reuters'     },
-  { key: 'cnbc',      label: 'CNBC'        },
-  { key: 'bloomberg', label: 'Bloomberg'   },
+  { key: 'all',       label: 'All Sources'  },
+  { key: 'wsj',       label: 'WSJ'          },
+  { key: 'ft',        label: 'MarketWatch'  },
+  { key: 'reuters',   label: 'NYT Business' },
+  { key: 'cnbc',      label: 'CNBC'         },
+  { key: 'bloomberg', label: 'Bloomberg'    },
 ];
 
 interface Props {

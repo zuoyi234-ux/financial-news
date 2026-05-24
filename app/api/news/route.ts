@@ -3,30 +3,24 @@ import { fetchFeed, FeedConfig } from '@/lib/rss';
 
 export const dynamic = 'force-dynamic';
 
-function rss2jsonUrl(rssUrl: string) {
-  return `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-}
-
+// curl-verified working feeds (tested 2026-05-24)
+// Reuters: dead (DNS timeout). FT: 403 even with UA.
+// Replacements: NYT Business (49 items), MarketWatch (10 items).
 const FEEDS: FeedConfig[] = [
   {
-    // WSJ: direct XML (usually accessible)
     url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
     source: 'wsj',
     label: 'WSJ',
   },
   {
-    // FT: via rss2json proxy to avoid 403 from server-side requests
-    url: rss2jsonUrl('https://www.ft.com/rss/home/us'),
-    source: 'ft',
-    label: 'FT',
-    type: 'rss2json',
+    url: 'https://feeds.marketwatch.com/marketwatch/topstories/',
+    source: 'ft',          // keep key 'ft' so UI tab still works
+    label: 'MarketWatch',
   },
   {
-    // Reuters: via rss2json proxy (direct feed blocked on Vercel IPs)
-    url: rss2jsonUrl('https://feeds.reuters.com/reuters/businessNews'),
-    source: 'reuters',
-    label: 'Reuters',
-    type: 'rss2json',
+    url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
+    source: 'reuters',     // keep key 'reuters' so UI tab still works
+    label: 'NYT Business',
   },
   {
     url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147',
@@ -34,7 +28,9 @@ const FEEDS: FeedConfig[] = [
     label: 'CNBC',
   },
   {
-    url: rss2jsonUrl('https://feeds.bloomberg.com/markets/news.rss'),
+    url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
+      'https://feeds.bloomberg.com/markets/news.rss'
+    )}`,
     source: 'bloomberg',
     label: 'Bloomberg',
     type: 'rss2json',
@@ -52,10 +48,9 @@ export async function GET(request: NextRequest) {
 
   const results = await Promise.allSettled(targets.map(fetchFeed));
 
-  // Log failures in development
   results.forEach((r, i) => {
     if (r.status === 'rejected') {
-      console.error(`[news/route] Feed "${targets[i].source}" failed:`, r.reason);
+      console.error(`[news] "${targets[i].source}" failed:`, r.reason);
     }
   });
 
@@ -70,10 +65,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     { items, updatedAt: new Date().toISOString() },
-    {
-      headers: {
-        'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=60',
-      },
-    }
+    { headers: { 'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=60' } }
   );
 }
