@@ -3,21 +3,30 @@ import { fetchFeed, FeedConfig } from '@/lib/rss';
 
 export const dynamic = 'force-dynamic';
 
+function rss2jsonUrl(rssUrl: string) {
+  return `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+}
+
 const FEEDS: FeedConfig[] = [
   {
+    // WSJ: direct XML (usually accessible)
     url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
     source: 'wsj',
     label: 'WSJ',
   },
   {
-    url: 'https://www.ft.com/rss/home/us',
+    // FT: via rss2json proxy to avoid 403 from server-side requests
+    url: rss2jsonUrl('https://www.ft.com/rss/home/us'),
     source: 'ft',
     label: 'FT',
+    type: 'rss2json',
   },
   {
-    url: 'https://feeds.reuters.com/reuters/businessNews',
+    // Reuters: via rss2json proxy (direct feed blocked on Vercel IPs)
+    url: rss2jsonUrl('https://feeds.reuters.com/reuters/businessNews'),
     source: 'reuters',
     label: 'Reuters',
+    type: 'rss2json',
   },
   {
     url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147',
@@ -25,10 +34,7 @@ const FEEDS: FeedConfig[] = [
     label: 'CNBC',
   },
   {
-    // Bloomberg Markets via rss2json proxy (free tier, no key needed for low volume)
-    url: `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
-      'https://feeds.bloomberg.com/markets/news.rss'
-    )}`,
+    url: rss2jsonUrl('https://feeds.bloomberg.com/markets/news.rss'),
     source: 'bloomberg',
     label: 'Bloomberg',
     type: 'rss2json',
