@@ -3,6 +3,25 @@
 import { useState } from 'react';
 import type { NewsItem } from '@/lib/types';
 
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-yellow-200 text-yellow-900 rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 const SOURCE_BADGE: Record<string, string> = {
   wsj:       'bg-red-100 text-red-700 ring-red-200',
   ft:        'bg-teal-100 text-teal-700 ring-teal-200',
@@ -24,7 +43,7 @@ function relativeTime(dateStr: string): string {
 
 type SummaryState = 'idle' | 'loading' | 'done' | 'error';
 
-export default function NewsCard({ item }: { item: NewsItem }) {
+export default function NewsCard({ item, highlight = '' }: { item: NewsItem; highlight?: string }) {
   const badge = SOURCE_BADGE[item.source] ?? 'bg-gray-100 text-gray-600 ring-gray-200';
   const [summaryState, setSummaryState] = useState<SummaryState>('idle');
   const [summary, setSummary] = useState('');
@@ -78,13 +97,13 @@ export default function NewsCard({ item }: { item: NewsItem }) {
 
       {/* Headline */}
       <h2 className="text-sm sm:text-base font-semibold text-gray-900 leading-snug line-clamp-2 mb-2 group-hover:text-blue-700 transition-colors">
-        {item.title}
+        <Highlight text={item.title} query={highlight} />
       </h2>
 
       {/* Summary */}
       {item.description && (
         <p className="text-sm text-gray-500 leading-relaxed line-clamp-3 mb-3">
-          {item.description}
+          <Highlight text={item.description} query={highlight} />
         </p>
       )}
 
